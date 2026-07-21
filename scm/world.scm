@@ -11,10 +11,11 @@
 (use-modules (ice-9 ftw))
 
 (define (core-packages)
-  "Return a list of every port directory under /usr/ports/core/."
+  "Return a list of every port under /usr/ports/core/ (must contain a Pkgfile)."
   (scandir "/usr/ports/core"
            (lambda (name)
-             (not (member name '("." ".."))))))
+             (and (not (member name '("." "..")))
+                  (file-exists? (string-append "/usr/ports/core/" name "/Pkgfile"))))))
 
 ;; Default: just what's in core.  New ports added to the collection
 ;; are picked up automatically — no manual editing needed.
