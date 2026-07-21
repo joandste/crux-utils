@@ -1,5 +1,5 @@
 CXX ?= c++
-CXXFLAGS ?= -std=c++20 -O2 -Wno-volatile
+CXXFLAGS = -std=c++20 -O2 -Wno-volatile
 GUILE_CFLAGS := $(shell pkg-config --cflags guile-3.0)
 GUILE_LIBS := $(shell pkg-config --libs guile-3.0)
 

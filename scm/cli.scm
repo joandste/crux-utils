@@ -5,9 +5,7 @@
 ;;;   ./repl -s cli.scm depends [--missing] <port>
 ;;;   ./repl -s cli.scm world [--missing|--orphan]
 
-(use-modules (ice-9 rdelim))
-
-(define *world-file* (or (getenv "WORLD_FILE") "/var/lib/pkg/world"))
+(define *world-file* (or (getenv "WORLD_FILE") "/var/lib/pkg/world.scm"))
 
 ;; ---------------------------------------------------------------------------
 ;; graph resolver
@@ -31,21 +29,19 @@
       (reverse order))))
 
 ;; ---------------------------------------------------------------------------
-;; world file reader
+;; world file reader — evaluates world.scm as Scheme, returns *world*
 ;; ---------------------------------------------------------------------------
 
 (define (read-world-file path)
-  (call-with-input-file path
-    (lambda (port)
-      (let loop ((lines '()))
-        (let ((line (read-line port 'concat)))
-          (if (eof-object? line)
-              (reverse lines)
-              (let ((trimmed (string-trim-both line)))
-                (cond
-                 ((string-null? trimmed) (loop lines))
-                 ((char=? (string-ref trimmed 0) #\#) (loop lines))
-                 (else (loop (cons trimmed lines)))))))))))
+  (if (file-exists? path)
+      (begin
+        (load path)
+        (if (defined? '*world*) *world* '()))
+      (begin
+        (display "warning: " (current-error-port))
+        (display path (current-error-port))
+        (display " not found\n" (current-error-port))
+        '())))
 
 ;; ---------------------------------------------------------------------------
 ;; output helpers
@@ -80,13 +76,6 @@
     (for-each (lambda (p) (format #t "  ~a\n" p)) to-build)
     (newline)
     (for-each build-package to-build)
-
-    ;; append the installed port to the world file
-    (let ((p (open-file *world-file* "a")))
-      (display port p)
-      (newline p)
-      (close-port p))
-    (format #t "added ~a to world file\n" port)
     (format #t "done.\n")))
 
 (define (needs-upgrade? p)
@@ -133,17 +122,6 @@
   (unless (installed? port)
     (format #t "~a is not installed\n" port)
     (exit 1))
-
-  ;; remove from world file if present
-  (if (file-exists? *world-file*)
-      (let* ((lines (read-world-file *world-file*))
-             (remaining (filter (lambda (p) (not (equal? p port))) lines)))
-        (call-with-output-file *world-file*
-          (lambda (p)
-            (for-each (lambda (l) (display l p) (newline p)) remaining)))
-        (format #t "removed ~a from world file\n" port))
-      (format #t "warning: world file not found, skipping world removal\n"))
-
   (format #t "removing ~a ...\n" port)
   (let ((ret (system (string-append "pkgrm " port))))
     (unless (zero? ret)
