@@ -6,13 +6,13 @@
 #
 # Supported:
 #   prt-get isinst <pkg>    check if a package is installed (exit 0/1)
-#
-# TODO: replace pkginfo dependency with a direct read of /var/lib/pkg/db
+
+DB=/var/lib/pkg/db
 
 case "$1" in
     isinst)
         shift
-        pkginfo -l "$1" >/dev/null 2>&1
+        [ -f "$DB" ] && grep -q "^$1$" "$DB"
         exit $?
         ;;
 
