@@ -1,0 +1,36 @@
+#!/bin/bash
+# prttil — entry point for the C++/Guile CRUX package tools.
+#
+# Resolves paths relative to this script so it can be called from anywhere.
+# Delegates to cpp/repl with scm/cli.scm.
+#
+# Most commands need root — checked up front.
+#
+# Commands:
+#   install <port>          build and install a port with its deps
+#   remove <port>           remove a port and its world file entry
+#   upgrade [--world] [<port>]  upgrade a port, or --world for all outdated
+#   depends [--missing]     print dependency graph (or only uninstalled)
+#   world [--missing|--orphan]  resolve full world file
+#   diff                    compare installed vs ports versions
+#   sync                    update all port collections via rsync
+
+case "${1:-}" in
+    depends|world|diff|'')
+        # read-only commands, no root needed
+        ;;
+    *)
+        if [ "$(id -u)" -ne 0 ]; then
+            echo "error: $0 $1 requires root" >&2
+            exit 1
+        fi
+        ;;
+esac
+
+self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -x "$self/prttil-repl" ]; then
+    exec "$self/prttil-repl" -s "$self/scm/cli.scm" "$@"
+else
+    exec "$self/../lib/prttil/repl" -s "$self/../lib/prttil/cli.scm" "$@"
+fi

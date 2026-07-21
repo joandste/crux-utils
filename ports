@@ -1,0 +1,28 @@
+#!/bin/bash
+# ports — sync all CRUX port collections via rsync.
+#
+# Reads /etc/ports/*.rsync config files and runs rsync for each.
+# Needs root to write to /usr/ports.
+#
+# Called internally by `prttil sync`. Not meant to be invoked directly.
+# Needs root to write to /usr/ports — checked up front.
+
+set -euo pipefail
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "error: ports sync requires root" >&2
+    exit 1
+fi
+
+for config in /etc/ports/*.rsync; do
+    [ -f "$config" ] || continue
+
+    host=$(sed -n 's/^host=//p' "$config")
+    collection=$(sed -n 's/^collection=//p' "$config")
+    dest=$(sed -n 's/^destination=//p' "$config")
+
+    [ -n "$host" ] && [ -n "$collection" ] && [ -n "$dest" ] || continue
+
+    echo "  syncing ${dest##*/} ..."
+    rsync -crz --delete "$host::$collection" "$dest/"
+done

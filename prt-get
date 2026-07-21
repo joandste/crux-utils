@@ -1,0 +1,23 @@
+#!/bin/bash
+# prt-get — minimal compatibility shim.
+#
+# Some scripts (e.g. prt-world) expect `prt-get` to exist.
+# This only implements the subcommands that crux-utils still uses.
+#
+# Supported:
+#   prt-get isinst <pkg>    check if a package is installed (exit 0/1)
+#
+# TODO: replace pkginfo dependency with a direct read of /var/lib/pkg/db
+
+case "$1" in
+    isinst)
+        shift
+        pkginfo -l "$1" >/dev/null 2>&1
+        exit $?
+        ;;
+
+    *)
+        echo "Unsupported command: $1" >&2
+        exit 1
+        ;;
+esac
