@@ -1,7 +1,5 @@
 CXX ?= c++
 CXXFLAGS ?= -std=c++20 -O2 -Wno-volatile
-GUILE_CFLAGS := $(shell pkg-config --cflags guile-3.0)
-GUILE_LIBS := $(shell pkg-config --libs guile-3.0)
 
 DESTDIR ?=
 PREFIX ?= /usr
@@ -14,8 +12,8 @@ all: build
 
 build: prttil-repl
 
-prttil-repl: cpp/pkgdb.cpp cpp/repl.cpp
-	$(CXX) $(CXXFLAGS) $(GUILE_CFLAGS) -I cpp -o $@ $^ $(GUILE_LIBS)
+prttil-repl: cpp/pkgdb.cpp cpp/repl.cpp cpp/s7.c
+	$(CXX) $(CXXFLAGS) -I cpp -o $@ $^
 
 install: build
 	install -d $(BINDIR) $(LIBDIR)

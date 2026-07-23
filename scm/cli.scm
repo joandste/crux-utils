@@ -1,289 +1,105 @@
-;;; cli.scm --- prttil-like CLI on top of the C++ package DB
-;;;
-;;; Usage:
-;;;   ./repl -s cli.scm install <port>
-;;;   ./repl -s cli.scm depends [--missing] <port>
-;;;   ./repl -s cli.scm world [--missing|--orphan]
+;;; cli.scm --- minimal CRUX package CLI (s7)
 
-(use-modules (ice-9 rdelim))
-
-(define *world-file* (or (getenv "WORLD_FILE") "/var/lib/pkg/world"))
-
-;; ---------------------------------------------------------------------------
-;; graph resolver
-;; ---------------------------------------------------------------------------
+(define (read-world-file path)
+  (define (trim s)
+    (let loop ((i 0) (j (- (string-length s) 1)))
+      (cond
+       ((and (<= i j) (char-whitespace? (string-ref s i))) (loop (+ i 1) j))
+       ((and (<= i j) (char-whitespace? (string-ref s j))) (loop i (- j 1)))
+       ((> i j) "")
+       (else (substring s i (+ j 1))))))
+  (call-with-input-file path
+    (lambda (port)
+      (let loop ((lines '()))
+        (let ((line (read-line port)))
+          (if (eof-object? line)
+              (reverse lines)
+              (let ((s (trim line)))
+                (if (or (= (string-length s) 0) (char=? (string-ref s 0) #\#))
+                    (loop lines)
+                    (loop (cons s lines))))))))))
 
 (define (resolve-graph roots)
-  (let ((seen (make-hash-table))
+  (let ((seen (make-hash-table 32))
         (order '()))
     (letrec ((dfs (lambda (pkg)
-                    (unless (hash-ref seen pkg)
-                      (hash-set! seen pkg #t)
+                    (unless (hash-table-ref seen pkg)
+                      (hash-table-set! seen pkg #t)
                       (if (has-port? pkg)
                           (begin
                             (for-each dfs (port-deps pkg))
                             (set! order (cons pkg order)))
-                          (begin
-                            (display "warning: " (current-error-port))
-                            (display pkg (current-error-port))
-                            (display " is not in the ports tree\n" (current-error-port))))))))
+                          (format (current-error-port)
+                                  "warning: ~a is not in the ports tree\n" pkg))))))
       (for-each dfs roots)
       (reverse order))))
 
-;; ---------------------------------------------------------------------------
-;; world file reader
-;; ---------------------------------------------------------------------------
-
-(define (read-world-file path)
-  (call-with-input-file path
-    (lambda (port)
-      (let loop ((lines '()))
-        (let ((line (read-line port 'concat)))
-          (if (eof-object? line)
-              (reverse lines)
-              (let ((trimmed (string-trim-both line)))
-                (cond
-                 ((string-null? trimmed) (loop lines))
-                 ((char=? (string-ref trimmed 0) #\#) (loop lines))
-                 (else (loop (cons trimmed lines)))))))))))
-
-;; ---------------------------------------------------------------------------
-;; output helpers
-;; ---------------------------------------------------------------------------
-
-(define (print-lines items)
-  (for-each (lambda (item) (display item) (newline)) items))
-
-;; ---------------------------------------------------------------------------
-;; commands
-;; ---------------------------------------------------------------------------
-
-(define (build-package p)
-  (format #t "==> building ~a\n" p)
-  (let* ((dir (port-dir p))
-         (mk (system (string-append "cd " dir " && setpriv --reuid=pkgmk --regid=pkgmk --clear-groups rootlesskit pkgmk -d"))))
-    (unless (zero? mk)
-      (display "pkgmk failed, aborting\n" (current-error-port))
-      (exit 1))
-    (let ((add (system (string-append "cd /tmp && pkgadd -u " p "#" (port-version p) "-" (port-release p) ".pkg.tar.*"))))
-      (unless (zero? add)
-        (display "pkgadd failed, aborting\n" (current-error-port))
-        (exit 1)))))
-
-(define (command-install port)
-  (let* ((graph (resolve-graph (list port)))
-         (to-build (filter (lambda (p) (not (installed? p))) graph)))
-    (if (null? to-build)
-        (begin (format #t "nothing to build — ~a and its deps are already installed\n" port)
-               (exit 0)))
-    (format #t "building ~a packages:\n" (length to-build))
-    (for-each (lambda (p) (format #t "  ~a\n" p)) to-build)
-    (newline)
-    (for-each build-package to-build)
-
-    ;; append the installed port to the world file
-    (let ((p (open-file *world-file* "a")))
-      (display port p)
-      (newline p)
-      (close-port p))
-    (format #t "added ~a to world file\n" port)
-    (format #t "done.\n")))
-
-(define (needs-upgrade? p)
-  (and (has-port? p)
-       (installed? p)
-       (let ((pv (port-version p))
-             (pr (port-release p))
-             (sv (installed-version p))
-             (sr (installed-release p)))
-         (or (not (equal? pv sv)) (not (equal? pr sr))))))
-
-(define (command-upgrade port)
-  (unless (has-port? port)
-    (format #t "~a is not in the ports tree\n" port)
-    (exit 1))
-  (unless (installed? port)
-    (format #t "~a is not installed — use install instead\n" port)
-    (exit 1))
-  (unless (needs-upgrade? port)
-    (format #t "~a is up to date\n" port)
-    (exit 0))
-  (format #t "upgrading ~a: ~a-~a → ~a-~a\n"
-          port (installed-version port) (installed-release port)
-          (port-version port) (port-release port))
-  (build-package port))
-
-(define (command-upgrade-world)
-  (let* ((world (read-world-file *world-file*))
-         (graph (resolve-graph world))
-         (to-upgrade (filter needs-upgrade? graph)))
-    (if (null? to-upgrade)
-        (begin (display "all world packages are up to date\n")
-               (exit 0)))
-    (format #t "upgrading ~a packages:\n" (length to-upgrade))
-    (for-each (lambda (p) (format #t "  ~a ~a-~a → ~a-~a\n" p
-                                  (installed-version p) (installed-release p)
-                                  (port-version p) (port-release p)))
-              to-upgrade)
-    (newline)
-    (for-each build-package to-upgrade)
-    (format #t "done.\n")))
-
-(define (command-remove port)
-  (unless (installed? port)
-    (format #t "~a is not installed\n" port)
-    (exit 1))
-
-  ;; remove from world file if present
-  (if (file-exists? *world-file*)
-      (let* ((lines (read-world-file *world-file*))
-             (remaining (filter (lambda (p) (not (equal? p port))) lines)))
-        (call-with-output-file *world-file*
-          (lambda (p)
-            (for-each (lambda (l) (display l p) (newline p)) remaining)))
-        (format #t "removed ~a from world file\n" port))
-      (format #t "warning: world file not found, skipping world removal\n"))
-
-  (format #t "removing ~a ...\n" port)
-  (let ((ret (system (string-append "pkgrm " port))))
-    (unless (zero? ret)
-      (display "pkgrm failed\n" (current-error-port))
-      (exit 1))))
-
-(define (command-depends port missing?)
-  (let ((graph (resolve-graph (list port))))
-    (if missing?
-        (for-each (lambda (p) (unless (installed? p) (display p) (newline))) graph)
-        (print-lines graph))))
-
-(define (command-sync)
-  (display "updating ports ...\n")
-  (let* ((dir (dirname (car (command-line))))
-         (script (if (file-exists? (string-append dir "/ports"))
-                     (string-append dir "/ports")
-                     (string-append dir "/../ports")))
-         (ret (system script)))
-    (if (zero? ret)
-        (display "done.\n")
-        (begin (display "port sync failed\n" (current-error-port))
-               (exit 1)))))
-
-(define (command-diff)
-  (for-each (lambda (p)
-              (if (has-port? p)
-                  (let ((pv (port-version p))
-                        (pr (port-release p))
-                        (sv (installed-version p))
-                        (sr (installed-release p)))
-                    (if (or (not (equal? pv sv)) (not (equal? pr sr)))
-                        (format #t "~a  installed ~a-~a  ports ~a-~a\n"
-                                p sv sr pv pr)))
-                  (format #t "~a  installed (not in ports tree)\n" p)))
-            (all-installed)))
-
-(define (command-world missing? orphan?)
-  (let* ((world (read-world-file *world-file*))
-         (graph (resolve-graph world)))
-    (cond
-     (missing?
-      (for-each (lambda (p) (unless (installed? p) (display p) (newline))) graph))
-     (orphan?
-      (let ((in-graph (make-hash-table)))
-        (for-each (lambda (p) (hash-set! in-graph p #t)) graph)
-        (for-each (lambda (p)
-                    (unless (hash-ref in-graph p)
-                      (display p) (newline)))
-                  (all-installed))))
-     (else
-      (print-lines graph)))))
-
-;; ---------------------------------------------------------------------------
-;; usage
-;; ---------------------------------------------------------------------------
-
-(define (print-usage)
-  (display "Usage:\n")
-  (display "  install <port>\n")
-  (display "  remove <port>\n")
-  (display "  upgrade [--world] [<port>]\n")
-  (display "  depends [--missing] <port>\n")
-  (display "  world [--missing|--orphan]\n")
-  (display "  diff\n")
-  (display "  sync\n"))
-
-(define (print-usage-and-exit)
-  (print-usage)
-  (exit 1))
+(define (diff-version p)
+  (if (has-port? p)
+      (let ((pv (port-version p)) (pr (port-release p))
+            (sv (installed-version p)) (sr (installed-release p)))
+        (if (or (not (equal? pv sv)) (not (equal? pr sr)))
+            (format #t "~a  installed ~a-~a  ports ~a-~a\n" p sv sr pv pr)))
+      (format #t "~a  installed (not in ports tree)\n" p)))
 
 ;; ---------------------------------------------------------------------------
 ;; main
 ;; ---------------------------------------------------------------------------
 
-(define (main argv)
-  (let ((cmd (and (pair? argv) (car argv))))
+(define (usage)
+  (display "usage:\n")
+  (display "  depends <port>              full dependency graph\n")
+  (display "  depends --missing <port>    only uninstalled deps\n")
+  (display "  world [--missing|--orphan] [<file>]\n")
+  (display "  diff                        installed vs ports versions\n"))
 
-    (unless cmd
-      (print-usage-and-exit))
+(let ((argv (cdr *command-line*)))
+  (unless (pair? argv)
+    (usage)
+    (exit 1))
 
-    ;; load data
-    (unless (load-ports)
-      (error "failed to load ports"))
-    (unless (load-installed)
-      (error "failed to load installed packages"))
+  (let ((cmd (car argv))
+        (args (cdr argv)))
+
+    (unless (load-ports) (error "failed to load ports"))
+    (unless (load-installed) (error "failed to load installed"))
 
     (cond
-     ;; install <port>
-     ((equal? cmd "install")
-      (if (not (= (length argv) 2))
-          (print-usage-and-exit))
-      (command-install (cadr argv)))
-
-     ;; remove <port>
-     ((equal? cmd "remove")
-      (if (not (= (length argv) 2))
-          (print-usage-and-exit))
-      (command-remove (cadr argv)))
-
-     ;; depends [--missing] <port>
      ((equal? cmd "depends")
-      (cond
-       ((= (length argv) 2)
-        (command-depends (cadr argv) #f))
-       ((and (= (length argv) 3) (equal? (cadr argv) "--missing"))
-        (command-depends (caddr argv) #t))
-       (else
-        (print-usage-and-exit))))
+      (if (and (pair? args) (equal? (car args) "--missing"))
+          (let ((graph (resolve-graph (list (cadr args)))))
+            (for-each (lambda (p) (unless (installed? p) (display p) (newline))) graph))
+          (let ((graph (resolve-graph (list (car args)))))
+            (for-each (lambda (p) (display p) (newline)) graph))))
 
-     ;; world [--missing|--orphan]
      ((equal? cmd "world")
-      (cond
-       ((= (length argv) 1)
-        (command-world #f #f))
-       ((and (= (length argv) 2) (equal? (cadr argv) "--missing"))
-        (command-world #t #f))
-       ((and (= (length argv) 2) (equal? (cadr argv) "--orphan"))
-        (command-world #f #t))
-       (else
-        (print-usage-and-exit))))
-
-     ((equal? cmd "upgrade")
-      (cond
-       ((and (= (length argv) 2) (equal? (cadr argv) "--world"))
-        (command-upgrade-world))
-       ((= (length argv) 2)
-        (command-upgrade (cadr argv)))
-       (else
-        (print-usage-and-exit))))
-
-     ((equal? cmd "sync")
-      (command-sync))
+      (let ((flag (and (pair? args) (car args)))
+            (path (if (and (pair? args) (not (equal? (car args) "--missing"))
+                           (not (equal? (car args) "--orphan")))
+                      (car args)
+                      "/var/lib/pkg/world")))
+        (if (not (file-exists? path))
+            (begin
+              (format (current-error-port) "world file not found: ~a\n" path)
+              (exit 1)))
+        (let* ((pkgs (read-world-file path))
+               (graph (resolve-graph pkgs)))
+          (cond
+           ((equal? flag "--missing")
+            (for-each (lambda (p) (unless (installed? p) (display p) (newline))) graph))
+           ((equal? flag "--orphan")
+            (let ((seen (make-hash-table 32)))
+              (for-each (lambda (p) (hash-table-set! seen p #t)) graph)
+              (for-each (lambda (p)
+                          (unless (hash-table-ref seen p)
+                            (display p) (newline)))
+                        (all-installed))))
+           (else
+            (for-each (lambda (p) (display p) (newline)) graph))))))
 
      ((equal? cmd "diff")
-      (command-diff))
+      (for-each diff-version (all-installed)))
 
      (else
-      (print-usage-and-exit)))))
-
-;; run when invoked via -s, not when loaded into a REPL
-(if (string-suffix? "cli.scm" (car (command-line)))
-    (main (cdr (command-line))))
+      (usage)
+      (exit 1)))))

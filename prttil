@@ -30,7 +30,7 @@ esac
 self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ -x "$self/prttil-repl" ]; then
-    exec "$self/prttil-repl" -s "$self/scm/cli.scm" "$@"
+    exec "$self/prttil-repl" "$self/scm/cli.scm" "$@"
 else
-    exec "$self/../lib/prttil/repl" -s "$self/../lib/prttil/cli.scm" "$@"
+    exec "$self/../lib/prttil/repl" "$self/../lib/prttil/cli.scm" "$@"
 fi
