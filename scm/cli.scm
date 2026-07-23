@@ -9,13 +9,14 @@
   "cd ~a && setpriv --reuid=pkgmk --regid=pkgmk --clear-groups rootlesskit pkgmk -d")
 
 (define *pkgadd-command*
-  "pkgadd -u ~a")
+  "pkgadd~a ~a")
 
 (define (pkgmk-cmd p)
   (format #f *pkgmk-command* (port-dir p)))
 
-(define (pkgadd-cmd p)
+(define (pkgadd-cmd p upgrade?)
   (format #f *pkgadd-command*
+          (if upgrade? " -u" "")
           (string-append "/tmp/" p "#" (port-version p) "-" (port-release p) ".pkg.tar.*")))
 
 ;; s7 doesn't have filter - provide it.
@@ -70,6 +71,12 @@
             (format #t "~a  installed ~a-~a  ports ~a-~a\n" p sv sr pv pr)))
       (format #t "~a  installed (not in ports tree)\n" p)))
 
+(define (needs-upgrade? p)
+  (and (has-port? p) (installed? p)
+       (let ((pv (port-version p)) (pr (port-release p))
+             (sv (installed-version p)) (sr (installed-release p)))
+         (or (not (equal? pv sv)) (not (equal? pr sr))))))
+
 ;; ---------------------------------------------------------------------------
 ;; main
 ;; ---------------------------------------------------------------------------
@@ -77,6 +84,7 @@
 (define (usage)
   (display "usage:\n")
   (display "  install <port>              build and install port + missing deps\n")
+  (display "  upgrade [--world] [<port>]  upgrade a port, or --world for all outdated\n")
   (display "  depends <port>              full dependency graph\n")
   (display "  depends --missing <port>    only uninstalled deps\n")
   (display "  world [--missing|--orphan] [<file>]\n")
@@ -110,11 +118,57 @@
                     (unless (zero? (system (pkgmk-cmd p)))
                       (format (current-error-port) "pkgmk failed for ~a\n" p)
                       (exit 1))
-                    (unless (zero? (system (pkgadd-cmd p)))
+                    (unless (zero? (system (pkgadd-cmd p #f)))
                       (format (current-error-port) "pkgadd failed for ~a\n" p)
                       (exit 1)))
                   to-build)
         (format #t "done.\n")))
+
+     ((equal? cmd "upgrade")
+      (cond
+       ((and (= (length args) 1) (equal? (car args) "--world"))
+        ;; upgrade --world: upgrade every outdated port in the world file
+        (let ((path "/var/lib/pkg/world"))
+          (if (not (file-exists? path))
+              (begin (format (current-error-port) "world file not found: ~a\n" path) (exit 1)))
+          (let* ((pkgs (read-world-file path))
+                 (graph (resolve-graph pkgs))
+                 (to-upgrade (filter needs-upgrade? graph)))
+            (if (null? to-upgrade)
+                (begin (display "all world packages are up to date\n") (exit 0)))
+            (format #t "upgrading ~a packages:\n" (length to-upgrade))
+            (for-each (lambda (p) (format #t "  ~a ~a-~a -> ~a-~a\n" p
+                                         (installed-version p) (installed-release p)
+                                         (port-version p) (port-release p)))
+                      to-upgrade)
+            (newline)
+            (for-each (lambda (p)
+                        (format #t "==> upgrading ~a\n" p)
+                        (unless (zero? (system (pkgmk-cmd p)))
+                          (format (current-error-port) "pkgmk failed for ~a\n" p) (exit 1))
+                        (unless (zero? (system (pkgadd-cmd p #t)))
+                          (format (current-error-port) "pkgadd failed for ~a\n" p) (exit 1)))
+                      to-upgrade)
+            (format #t "done.\n"))))
+       ((= (length args) 1)
+        ;; upgrade <port>
+        (let ((port (car args)))
+          (unless (has-port? port)
+            (format #t "~a is not in the ports tree\n" port) (exit 1))
+          (unless (installed? port)
+            (format #t "~a is not installed - use install instead\n" port) (exit 1))
+          (unless (needs-upgrade? port)
+            (format #t "~a is up to date\n" port) (exit 0))
+          (format #t "upgrading ~a: ~a-~a -> ~a-~a\n" port
+                  (installed-version port) (installed-release port)
+                  (port-version port) (port-release port))
+          (unless (zero? (system (pkgmk-cmd port)))
+            (format (current-error-port) "pkgmk failed\n") (exit 1))
+          (unless (zero? (system (pkgadd-cmd port #t)))
+            (format (current-error-port) "pkgadd failed\n") (exit 1))
+          (format #t "done.\n")))
+       (else
+        (usage) (exit 1))))
 
      ((equal? cmd "depends")
       (if (and (pair? args) (equal? (car args) "--missing"))

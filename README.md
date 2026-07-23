@@ -15,6 +15,8 @@ libraries beyond what the compiler ships.
 ## Usage
 
 ```
+./prttil-repl scm/cli.scm install <port>
+./prttil-repl scm/cli.scm upgrade [--world] [<port>]
 ./prttil-repl scm/cli.scm depends <port>
 ./prttil-repl scm/cli.scm depends --missing <port>
 ./prttil-repl scm/cli.scm world [--missing|--orphan] [<file>]
@@ -23,6 +25,9 @@ libraries beyond what the compiler ships.
 
 | command | what |
 |---------|------|
+| `install <port>` | build and install port with missing deps |
+| `upgrade <port>` | rebuild and upgrade a specific port |
+| `upgrade --world` | rebuild all outdated ports from the world file |
 | `depends <port>` | print full dependency graph |
 | `depends --missing <port>` | only deps not yet installed |
 | `world` | resolve `/var/lib/pkg/world` through the dep graph |
@@ -38,7 +43,7 @@ libraries beyond what the compiler ships.
 | `cpp/repl.cpp` | s7-embedded REPL exposing the DB as Scheme procedures |
 | `cpp/s7.c` / `.h` | s7 Scheme interpreter (0-Clause BSD) |
 | `scm/cli.scm` | CLI commands written in Scheme |
-| `prttil` | (stale) wrapper script - use `prttil-repl` directly instead |
+| `prttil` | entry-point wrapper - passes commands through to `prttil-repl` |
 
 ## Licensing
 

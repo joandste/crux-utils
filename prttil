@@ -1,8 +1,7 @@
 #!/bin/bash
 # prttil - calls the s7-based REPL with cli.scm.
 #
-# Most commands need root - checked up front for anything
-# that isn't depends, world, or diff.
+# install needs root; depends, world, and diff are read-only.
 
 case "${1:-}" in
     depends|world|diff|'')
