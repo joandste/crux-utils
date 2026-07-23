@@ -33,7 +33,7 @@ std::vector<std::string> PackageDB::parse_dep_line(const std::string& line) cons
     return deps;
 }
 
-// Pkgfiles are bash-sourcable — this extracts all key=value lines.
+// Pkgfiles are bash-sourcable - this extracts all key=value lines.
 // CRUX Pkgfiles always use plain key=value (no quotes, no export),
 // so the parser is deliberately simple: find `=`, split once.
 static std::map<std::string, std::string> parse_assignments(std::istream& input) {

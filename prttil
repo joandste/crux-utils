@@ -1,19 +1,8 @@
 #!/bin/bash
-# prttil — entry point for the C++/Guile CRUX package tools.
+# prttil - calls the s7-based REPL with cli.scm.
 #
-# Resolves paths relative to this script so it can be called from anywhere.
-# Delegates to cpp/repl with scm/cli.scm.
-#
-# Most commands need root — checked up front.
-#
-# Commands:
-#   install <port>          build and install a port with its deps
-#   remove <port>           remove a port and its world file entry
-#   upgrade [--world] [<port>]  upgrade a port, or --world for all outdated
-#   depends [--missing]     print dependency graph (or only uninstalled)
-#   world [--missing|--orphan]  resolve full world file
-#   diff                    compare installed vs ports versions
-#   sync                    update all port collections via rsync
+# Most commands need root - checked up front for anything
+# that isn't depends, world, or diff.
 
 case "${1:-}" in
     depends|world|diff|'')

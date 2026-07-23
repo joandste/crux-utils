@@ -1,4 +1,4 @@
-// repl.cpp — embeds s7 Scheme and exposes the C++ PackageDB.
+// repl.cpp - embeds s7 Scheme and exposes the C++ PackageDB.
 //
 // Compile with:
 //   c++ -std=c++20 -O2 -Wno-volatile -I cpp -o prttil-repl cpp/pkgdb.cpp cpp/repl.cpp cpp/s7.c
@@ -108,19 +108,19 @@ static s7_pointer scm_exit(s7_scheme *sc, s7_pointer args) {
 // ---------------------------------------------------------------------------
 
 static void register_procedures(s7_scheme *sc) {
-    s7_define_function(sc, "exit",             scm_exit,         0, 1, false, "(exit [code]) — exit the process");
-    s7_define_function(sc, "load-ports",         load_ports,       0, 0, false, "(load-ports) — scan /usr/ports for Pkgfiles");
-    s7_define_function(sc, "load-installed",     load_installed,   0, 0, false, "(load-installed) — parse /var/lib/pkg/db");
-    s7_define_function(sc, "has-port?",          has_port,         1, 0, false, "(has-port? name) — #t if port exists in ports tree");
-    s7_define_function(sc, "port-version",       port_version,     1, 0, false, "(port-version name) — version string");
-    s7_define_function(sc, "port-release",       port_release,     1, 0, false, "(port-release name) — release string");
-    s7_define_function(sc, "port-dir",           port_dir,         1, 0, false, "(port-dir name) — parent dir of Pkgfile");
-    s7_define_function(sc, "port-deps",          port_deps,        1, 0, false, "(port-deps name) — list of dependencies");
-    s7_define_function(sc, "installed?",         is_installed,     1, 0, false, "(installed? name) — #t if package is installed");
-    s7_define_function(sc, "installed-version",  installed_version, 1, 0, false, "(installed-version name) — version or #f");
-    s7_define_function(sc, "installed-release",  installed_release, 1, 0, false, "(installed-release name) — release or #f");
-    s7_define_function(sc, "all-ports",          all_ports,        0, 0, false, "(all-ports) — list all port names");
-    s7_define_function(sc, "all-installed",      all_installed,    0, 0, false, "(all-installed) — list all installed packages");
+    s7_define_function(sc, "exit",             scm_exit,         0, 1, false, "(exit [code]) - exit the process");
+    s7_define_function(sc, "load-ports",         load_ports,       0, 0, false, "(load-ports) - scan /usr/ports for Pkgfiles");
+    s7_define_function(sc, "load-installed",     load_installed,   0, 0, false, "(load-installed) - parse /var/lib/pkg/db");
+    s7_define_function(sc, "has-port?",          has_port,         1, 0, false, "(has-port? name) - #t if port exists in ports tree");
+    s7_define_function(sc, "port-version",       port_version,     1, 0, false, "(port-version name) - version string");
+    s7_define_function(sc, "port-release",       port_release,     1, 0, false, "(port-release name) - release string");
+    s7_define_function(sc, "port-dir",           port_dir,         1, 0, false, "(port-dir name) - parent dir of Pkgfile");
+    s7_define_function(sc, "port-deps",          port_deps,        1, 0, false, "(port-deps name) - list of dependencies");
+    s7_define_function(sc, "installed?",         is_installed,     1, 0, false, "(installed? name) - #t if package is installed");
+    s7_define_function(sc, "installed-version",  installed_version, 1, 0, false, "(installed-version name) - version or #f");
+    s7_define_function(sc, "installed-release",  installed_release, 1, 0, false, "(installed-release name) - release or #f");
+    s7_define_function(sc, "all-ports",          all_ports,        0, 0, false, "(all-ports) - list all port names");
+    s7_define_function(sc, "all-installed",      all_installed,    0, 0, false, "(all-installed) - list all installed packages");
 }
 
 int main(int argc, char* argv[]) {

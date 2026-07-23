@@ -1,5 +1,4 @@
-# Core ports 
-# Recommended to keep all, but you can comment out stuff here.
+# Core ports - comment out any you don't want.
 acl
 attr
 autoconf
@@ -126,5 +125,3 @@ which
 xz
 zlib
 zstd
-
-# Add ports here

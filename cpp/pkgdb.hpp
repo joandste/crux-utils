@@ -8,7 +8,7 @@
 namespace pkgdb {
 
 // A package seen from either the ports tree or the installed db.
-// The same struct is used for both sources — which map it lives in tells you
+// The same struct is used for both sources - which map it lives in tells you
 // whether it's a port or installed.
 struct PackageRecord {
     std::string name;
@@ -19,22 +19,22 @@ struct PackageRecord {
 };
 
 // Core data layer: loads and indexes the ports tree + installed packages.
-// No subprocesses, no side effects — pure file I/O and in-memory indexing.
+// No subprocesses, no side effects - pure file I/O and in-memory indexing.
 class PackageDB {
 public:
     PackageDB() = default;
 
-    // loaders — populate the two internal maps
+    // loaders - populate the two internal maps
     bool load_ports(const std::filesystem::path& ports_dir);    // scan for Pkgfiles
     bool load_installed();                                      // parse /var/lib/pkg/db
     PackageRecord load_pkgfile(const std::filesystem::path& pkgfile) const;  // single Pkgfile
 
-    // port queries — look up data in the ports_ map
+    // port queries - look up data in the ports_ map
     bool has_port(const std::string& name) const;
     std::filesystem::path port_dir(const std::string& name) const;     // parent of Pkgfile
     PackageRecord port_record(const std::string& name) const;
 
-    // installed queries — look up data in the installed_ map
+    // installed queries - look up data in the installed_ map
     bool is_installed(const std::string& name) const;
 
     // expose the full maps for iteration

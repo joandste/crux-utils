@@ -1,11 +1,11 @@
 #!/bin/bash
-# ports — sync all CRUX port collections via rsync.
+# ports - sync all CRUX port collections via rsync.
 #
 # Reads /etc/ports/*.rsync config files and runs rsync for each.
 # Needs root to write to /usr/ports.
 #
 # Called internally by `prttil sync`. Not meant to be invoked directly.
-# Needs root to write to /usr/ports — checked up front.
+# Needs root to write to /usr/ports - checked up front.
 
 set -euo pipefail
 
