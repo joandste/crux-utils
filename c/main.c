@@ -6,7 +6,8 @@
  * Registers Scheme procedures (load-ports, load-pkgs, world-read, ...) that
  * delegate to the C port, pkg and world modules, then hands control over to
  * s7: it loads a script if one is given on the command line, otherwise drops
- * into an interactive REPL.
+ * into an interactive REPL.  Port collection dirs and the pkg db path are
+ * passed in from Scheme, so the C side never hardcodes them.
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -23,14 +24,19 @@
 
 static s7_pointer load_ports(s7_scheme *sc, s7_pointer args)
 {
+    return s7_make_boolean(sc, ports_load(s7_string(s7_car(args))) >= 0);
+}
+
+static s7_pointer ports_clear_fn(s7_scheme *sc, s7_pointer args)
+{
     (void)args;
-    return s7_make_boolean(sc, ports_load("/usr/ports") >= 0);
+    ports_clear();
+    return s7_unspecified(sc);
 }
 
 static s7_pointer load_pkgs(s7_scheme *sc, s7_pointer args)
 {
-    (void)args;
-    return s7_make_boolean(sc, pkgs_load("/var/lib/pkg/db") >= 0);
+    return s7_make_boolean(sc, pkgs_load(s7_string(s7_car(args))) >= 0);
 }
 
 static s7_pointer has_port(s7_scheme *sc, s7_pointer args)
@@ -158,8 +164,9 @@ static s7_pointer scm_exit(s7_scheme *sc, s7_pointer args)
 static void register_procedures(s7_scheme *sc)
 {
     s7_define_function(sc, "exit",               scm_exit,          0, 1, false, "(exit [code]) - exit the process");
-    s7_define_function(sc, "load-ports",         load_ports,        0, 0, false, "(load-ports) - scan /usr/ports for Pkgfiles");
-    s7_define_function(sc, "load-pkgs",          load_pkgs,         0, 0, false, "(load-pkgs) - parse /var/lib/pkg/db");
+    s7_define_function(sc, "load-ports",         load_ports,        1, 0, false, "(load-ports path) - scan one port directory for Pkgfiles");
+    s7_define_function(sc, "ports-clear",        ports_clear_fn,    0, 0, false, "(ports-clear) - clear the loaded ports");
+    s7_define_function(sc, "load-pkgs",          load_pkgs,         1, 0, false, "(load-pkgs path) - parse the package db at path");
     s7_define_function(sc, "has-port?",          has_port,          1, 0, false, "(has-port? name) - #t if port exists in ports tree");
     s7_define_function(sc, "port-version",       port_version,      1, 0, false, "(port-version name) - version string");
     s7_define_function(sc, "port-release",       port_release,      1, 0, false, "(port-release name) - release string");

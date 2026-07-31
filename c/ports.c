@@ -133,39 +133,47 @@ static char *join_path(const char *a, const char *b)
     return p;
 }
 
-/* recursively scan a directory, adding any Pkgfile found */
-static void scan_dir(const char *dir)
+/* scan one port collection directory, one level deep: every immediate
+ * subdirectory is a port, so look for its Pkgfile.  Returns 0 on success,
+ * -1 if the directory can't be opened. */
+static int scan_collection(const char *dir)
 {
     DIR *d = opendir(dir);
-    if (!d) return;
+    if (!d) return -1;
 
     struct dirent *e;
     while ((e = readdir(d)) != NULL) {
         if (strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0)
             continue;
 
-        char *path = join_path(dir, e->d_name);
+        char *sub = join_path(dir, e->d_name);
         struct stat st;
-        if (stat(path, &st) != 0) {
-            free(path);
-            continue;
+        if (stat(sub, &st) == 0 && S_ISDIR(st.st_mode)) {
+            char *pf = join_path(sub, "Pkgfile");
+            struct stat pst;
+            if (stat(pf, &pst) == 0 && S_ISREG(pst.st_mode)) {
+                port_t p;
+                if (load_pkgfile(pf, &p) == 0)
+                    add_port(&p);
+                else
+                    port_free(&p);
+            }
+            free(pf);
         }
-
-        if (S_ISDIR(st.st_mode)) {
-            scan_dir(path);
-        } else if (S_ISREG(st.st_mode) && strcmp(e->d_name, "Pkgfile") == 0) {
-            port_t p;
-            if (load_pkgfile(path, &p) == 0)
-                add_port(&p);
-            else
-                port_free(&p);
-        }
-        free(path);
+        free(sub);
     }
     closedir(d);
+    return 0;
 }
 
-int ports_load(const char *ports_dir)
+int ports_load(const char *dir)
+{
+    if (scan_collection(dir) < 0)
+        return -1;
+    return nports;
+}
+
+void ports_clear(void)
 {
     for (int i = 0; i < nports; i++)
         port_free(&ports[i]);
@@ -173,13 +181,6 @@ int ports_load(const char *ports_dir)
     ports = NULL;
     nports = 0;
     cap = 0;
-
-    struct stat st;
-    if (stat(ports_dir, &st) != 0 || !S_ISDIR(st.st_mode))
-        return -1;
-
-    scan_dir(ports_dir);
-    return nports;
 }
 
 int ports_count(void)
@@ -202,10 +203,5 @@ const port_t *ports_find(const char *name)
 
 void ports_free(void)
 {
-    for (int i = 0; i < nports; i++)
-        port_free(&ports[i]);
-    free(ports);
-    ports = NULL;
-    nports = 0;
-    cap = 0;
+    ports_clear();
 }

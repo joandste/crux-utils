@@ -11,9 +11,16 @@ typedef struct {
     char *pkgfile;   /* full path to the Pkgfile on disk */
 } port_t;
 
-/* Scan ports_dir recursively for Pkgfiles and build the port array.
- * Returns the number of ports loaded, or -1 on failure. */
-int ports_load(const char *ports_dir);
+/* Scan one port collection directory (e.g. /usr/ports/core) for Pkgfiles
+ * and append the found ports to the array.
+ *
+ * The directory is scanned one level deep - every immediate subdirectory
+ * is treated as a port and its Pkgfile is loaded.  No recursion.
+ *
+ * Returns the number of ports loaded so far, or -1 if the directory can't
+ * be opened.  Use ports_clear() to reset the array before loading. */
+int ports_load(const char *dir);
+void ports_clear(void);
 
 int ports_count(void);
 const port_t *ports_get(int i);

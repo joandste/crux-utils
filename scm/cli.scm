@@ -19,6 +19,14 @@
           (if upgrade? " -u" "")
           (string-append "/tmp/" p "#" (port-version p) "-" (port-release p) ".pkg.tar.*")))
 
+;; ---------------------------------------------------------------------------
+;; Paths - which port collections and pkg db to load.
+;; Each entry in *ports-dirs* is scanned one level deep (no recursion).
+;; ---------------------------------------------------------------------------
+
+(define *ports-dirs* '("/usr/ports/core" "/usr/ports/opt" "/usr/ports/xorg"))
+(define *pkg-db* "/var/lib/pkg/db")
+
 ;; s7 doesn't have filter - provide it.
 (define (filter pred lst)
   (let loop ((lst lst) (result '()))
@@ -80,8 +88,12 @@
   (let ((cmd (car argv))
         (args (cdr argv)))
 
-    (unless (load-ports) (error "failed to load ports"))
-    (unless (load-pkgs) (error "failed to load pkgs"))
+    (ports-clear)
+    (for-each (lambda (d)
+                (unless (load-ports d)
+                  (error (format #f "failed to load ports from ~a" d))))
+              *ports-dirs*)
+    (unless (load-pkgs *pkg-db*) (error "failed to load pkgs"))
 
     (cond
      ((equal? cmd "install")

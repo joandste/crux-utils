@@ -5,16 +5,18 @@ embedded s7 Scheme interpreter that provides the command-line interface.
 
 ## Layout
 
-- `c/ports.c` / `c/ports.h` - scans the CRUX ports tree for Pkgfiles and
+- `c/ports.c` / `c/ports.h` - scans the given port collection directories
+  (e.g. `/usr/ports/core`) one level deep, no recursion, for Pkgfiles and
   builds a list of available ports (name, version, release, dependencies).
-- `c/pkgs.c` / `c/pkgs.h` - parses `/var/lib/pkg/db` and builds a list of
-  installed packages.
-- `c/main.c` - the main program. Loads the port and package databases and
-  exposes them to Scheme as functions like `load-ports` and `load-pkgs`,
-  then hands control over to s7.
+- `c/pkgs.c` / `c/pkgs.h` - parses the package database and builds a list
+  of installed packages.
+- `c/main.c` - the main program. Exposes the port and package databases to
+  Scheme as functions like `load-ports` and `load-pkgs`, then hands control
+  over to s7.
 - `c/s7.c` / `c/s7.h` - the vendored s7 Scheme interpreter (see Licensing).
 - `scm/cli.scm` - the command-line commands (install, upgrade, depends,
-  world, diff) written in Scheme.
+  world, diff) written in Scheme. Configures the port directories
+  (`*ports-dirs*`) and package db path (`*pkg-db*`).
 - `prttil` - wrapper script that runs the whole thing.
 - `prt-get` - a small compatibility shim providing `prt-get isinst` for
   scripts that expect prt-get to exist.
