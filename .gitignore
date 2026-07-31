@@ -1,3 +1,4 @@
-prttil-repl
+prttil-main
 *.o
 *.go
+.vscode/

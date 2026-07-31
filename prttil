@@ -1,5 +1,5 @@
 #!/bin/bash
-# prttil - calls the s7-based REPL with cli.scm.
+# prttil - calls the s7-based main program with cli.scm.
 #
 # install needs root; depends, world, and diff are read-only.
 
@@ -17,8 +17,8 @@ esac
 
 self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ -x "$self/prttil-repl" ]; then
-    exec "$self/prttil-repl" "$self/scm/cli.scm" "$@"
+if [ -x "$self/prttil-main" ]; then
+    exec "$self/prttil-main" "$self/scm/cli.scm" "$@"
 else
-    exec "$self/../lib/prttil/repl" "$self/../lib/prttil/cli.scm" "$@"
+    exec "$self/../lib/prttil/main" "$self/../lib/prttil/cli.scm" "$@"
 fi

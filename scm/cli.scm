@@ -99,7 +99,7 @@
         (args (cdr argv)))
 
     (unless (load-ports) (error "failed to load ports"))
-    (unless (load-installed) (error "failed to load installed"))
+    (unless (load-pkgs) (error "failed to load pkgs"))
 
     (cond
      ((equal? cmd "install")

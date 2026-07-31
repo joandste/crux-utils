@@ -1,54 +1,48 @@
 # crux-utils
 
-CRUX package tools - C++ core with an embedded s7 Scheme REPL.
+CRUX package management tools. The core is written in plain C, with an
+embedded s7 Scheme interpreter that provides the command-line interface.
+
+## Layout
+
+- `c/ports.c` / `c/ports.h` - scans the CRUX ports tree for Pkgfiles and
+  builds a list of available ports (name, version, release, dependencies).
+- `c/pkgs.c` / `c/pkgs.h` - parses `/var/lib/pkg/db` and builds a list of
+  installed packages.
+- `c/main.c` - the main program. Loads the port and package databases and
+  exposes them to Scheme as functions like `load-ports` and `load-pkgs`,
+  then hands control over to s7.
+- `c/s7.c` / `c/s7.h` - the vendored s7 Scheme interpreter (see Licensing).
+- `scm/cli.scm` - the command-line commands (install, upgrade, depends,
+  world, diff) written in Scheme.
+- `prttil` - wrapper script that runs the whole thing.
+- `prt-get` - a small compatibility shim providing `prt-get isinst` for
+  scripts that expect prt-get to exist.
 
 ## Build
 
-```bash
-make
-sudo make install        # optional
-```
+    make
 
-Only needs a C++20 compiler and a POSIX environment - no extra
-libraries beyond what the compiler ships.
+This produces the `prttil-main` binary.
 
-## Usage
+## Use
 
-```
-./prttil-repl scm/cli.scm install <port>
-./prttil-repl scm/cli.scm upgrade [--world] [<port>]
-./prttil-repl scm/cli.scm depends <port>
-./prttil-repl scm/cli.scm depends --missing <port>
-./prttil-repl scm/cli.scm world [--missing|--orphan] [<file>]
-./prttil-repl scm/cli.scm diff
-```
+    ./prttil-main scm/cli.scm depends <port>
+    ./prttil-main scm/cli.scm diff
+    ./prttil-main scm/cli.scm install <port>    # needs root
+    ./prttil-main scm/cli.scm upgrade [--world] [<port>]
+    ./prttil-main scm/cli.scm world [--missing|--orphan] [<file>]
 
-| command | what |
-|---------|------|
-| `install <port>` | build and install port with missing deps |
-| `upgrade <port>` | rebuild and upgrade a specific port |
-| `upgrade --world` | rebuild all outdated ports from the world file |
-| `depends <port>` | print full dependency graph |
-| `depends --missing <port>` | only deps not yet installed |
-| `world` | resolve `/var/lib/pkg/world` through the dep graph |
-| `world --missing` | world deps not yet installed |
-| `world --orphan` | installed packages not in the world graph |
-| `diff` | shows installed packages where ports tree has a newer version |
+Or use the wrapper script, which locates the binary and cli.scm for you:
 
-## Files
-
-| path | role |
-|------|------|
-| `cpp/pkgdb.cpp` / `.hpp` | C++ port database - scans Pkgfiles, reads `/var/lib/pkg/db` |
-| `cpp/repl.cpp` | s7-embedded REPL exposing the DB as Scheme procedures |
-| `cpp/s7.c` / `.h` | s7 Scheme interpreter (0-Clause BSD) |
-| `scm/cli.scm` | CLI commands written in Scheme |
-| `prttil` | entry-point wrapper - passes commands through to `prttil-repl` |
+    ./prttil depends firefox
 
 ## Licensing
 
-The C++ core and Scheme glue (`cpp/`, `scm/`) are GPLv3.
-The project bundles [s7](https://ccrma.stanford.edu/software/s7/) -
-a Scheme interpreter released under the 0-Clause BSD licence -
-in `cpp/s7.c` and `cpp/s7.h`.  Both licences are compatible;
-no additional notice or restriction is introduced by the bundling.
+The project code (`c/` except for s7, and `scm/`) is GPLv3.
+
+The vendored s7 interpreter in `c/s7.c` and `c/s7.h` is released under the
+0-Clause BSD licence. That licence is compatible with GPLv3, so the two can
+be distributed together without any additional restrictions. s7 is bundled
+unmodified; its upstream is <https://ccrma.stanford.edu/software/s7/>.
+
