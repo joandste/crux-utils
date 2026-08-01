@@ -14,6 +14,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "pkgs.h"
+#include "util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,31 +23,6 @@
 static pkg_t *pkgs = NULL;
 static int npkgs = 0;
 static int cap = 0;
-
-static void *xrealloc(void *p, size_t n)
-{
-    void *q = realloc(p, n);
-    if (!q) { perror("realloc"); exit(1); }
-    return q;
-}
-
-static char *xstrdup(const char *s)
-{
-    char *p = strdup(s);
-    if (!p) { perror("strdup"); exit(1); }
-    return p;
-}
-
-/* trim leading/trailing whitespace in place; returns pointer to start */
-static char *trim(char *s)
-{
-    while (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n')
-        s++;
-    size_t n = strlen(s);
-    while (n > 0 && (s[n-1] == ' ' || s[n-1] == '\t' || s[n-1] == '\r' || s[n-1] == '\n'))
-        s[--n] = '\0';
-    return s;
-}
 
 static void pkg_free(pkg_t *p)
 {
@@ -60,19 +36,14 @@ static void add_pkg(pkg_t *p)
 {
     if (npkgs == cap) {
         cap = cap ? cap * 2 : 512;
-        pkgs = xrealloc(pkgs, sizeof(pkg_t) * cap);
+        pkgs = realloc(pkgs, sizeof(pkg_t) * cap);
     }
     pkgs[npkgs++] = *p;
 }
 
 int pkgs_load(const char *db_path)
 {
-    for (int i = 0; i < npkgs; i++)
-        pkg_free(&pkgs[i]);
-    free(pkgs);
-    pkgs = NULL;
-    npkgs = 0;
-    cap = 0;
+    pkgs_free();
 
     FILE *f = fopen(db_path, "r");
     if (!f) return -1;
@@ -83,7 +54,7 @@ int pkgs_load(const char *db_path)
     while (getline(&line, &len, f) != -1) {
         char *name = trim(line);
         if (*name == '\0') continue;
-        char *name_copy = xstrdup(name);
+        char *name_copy = strdup(name);
 
         /* next non-blank line is version-release, e.g. "2.4.0-1" */
         char *vr = NULL;
@@ -104,10 +75,10 @@ int pkgs_load(const char *db_path)
         char *dash = strrchr(vr, '-');
         if (dash) {
             *dash = '\0';
-            p.version = xstrdup(vr);
-            p.release = xstrdup(dash + 1);
+            p.version = strdup(vr);
+            p.release = strdup(dash + 1);
         } else {
-            p.version = xstrdup(vr);
+            p.version = strdup(vr);
         }
         add_pkg(&p);
 

@@ -14,21 +14,21 @@ LIBDIR := $(DESTDIR)$(PREFIX)/lib/prttil
 
 all: build
 
-build: prttil-main
+build: repl
 
-prttil-main: c/main.o c/ports.o c/pkgs.o c/world.o c/s7.o
+repl: c/main.o c/ports.o c/pkgs.o c/world.o c/s7.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 c/main.o: c/main.c c/ports.h c/pkgs.h c/world.h c/s7.h
 	$(CC) $(CFLAGS) -I c -c -o $@ c/main.c
 
-c/ports.o: c/ports.c c/ports.h
+c/ports.o: c/ports.c c/ports.h c/util.h
 	$(CC) $(CFLAGS) -I c -c -o $@ c/ports.c
 
-c/pkgs.o: c/pkgs.c c/pkgs.h
+c/pkgs.o: c/pkgs.c c/pkgs.h c/util.h
 	$(CC) $(CFLAGS) -I c -c -o $@ c/pkgs.c
 
-c/world.o: c/world.c c/world.h
+c/world.o: c/world.c c/world.h c/util.h
 	$(CC) $(CFLAGS) -I c -c -o $@ c/world.c
 
 c/s7.o: c/s7.c c/s7.h
@@ -36,11 +36,11 @@ c/s7.o: c/s7.c c/s7.h
 
 install: build
 	install -d $(BINDIR) $(LIBDIR)
-	install -m 755 prttil-main $(LIBDIR)/main
+	install -m 755 repl $(LIBDIR)/repl
 	install -m 755 scm/cli.scm $(LIBDIR)/cli.scm
 	install -m 755 ports $(LIBDIR)/ports
 	install -m 755 prttil $(BINDIR)/prttil
 	install -m 755 prt-get $(BINDIR)/prt-get
 
 clean:
-	rm -f prttil-main c/*.o
+	rm -f repl c/*.o

@@ -14,8 +14,8 @@ embedded s7 Scheme interpreter that provides the command-line interface.
   Scheme as functions like `load-ports` and `load-pkgs`, then hands control
   over to s7.
 - `c/s7.c` / `c/s7.h` - the vendored s7 Scheme interpreter (see Licensing).
-- `scm/cli.scm` - the command-line commands (install, upgrade, depends,
-  world, diff) written in Scheme. Configures the port directories
+- `scm/cli.scm` - the command-line commands (install, build, upgrade,
+  depends, world, diff) written in Scheme. Configures the port directories
   (`*ports-dirs*`) and package db path (`*pkg-db*`).
 - `prttil` - wrapper script that runs the whole thing.
 - `prt-get` - a small compatibility shim providing `prt-get isinst` for
@@ -25,15 +25,16 @@ embedded s7 Scheme interpreter that provides the command-line interface.
 
     make
 
-This produces the `prttil-main` binary.
+This produces the `repl` binary.
 
 ## Use
 
-    ./prttil-main scm/cli.scm depends <port>
-    ./prttil-main scm/cli.scm diff
-    ./prttil-main scm/cli.scm install <port>    # needs root
-    ./prttil-main scm/cli.scm upgrade [--world] [<port>]
-    ./prttil-main scm/cli.scm world [--missing|--orphan] [<file>]
+    ./repl scm/cli.scm depends <port>...
+    ./repl scm/cli.scm diff
+    ./repl scm/cli.scm install <port>...    # needs root
+    ./repl scm/cli.scm build <port>...      # pkgmk only, no install
+    ./repl scm/cli.scm upgrade [--world] <port>...
+    ./repl scm/cli.scm world [--missing|--orphan] [<file>]
 
 Or use the wrapper script, which locates the binary and cli.scm for you:
 

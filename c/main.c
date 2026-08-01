@@ -1,7 +1,7 @@
 /* main.c - embed s7 Scheme and expose the ports/pkgs/world databases to it.
  *
  * Compile with:
- *   cc -std=c11 -O2 -I c -o prttil-main c/main.c c/ports.c c/pkgs.c c/world.c c/s7.c
+ *   cc -std=c11 -O2 -I c -o repl c/main.c c/ports.c c/pkgs.c c/world.c c/s7.c
  *
  * Registers Scheme procedures (load-ports, load-pkgs, world-read, ...) that
  * delegate to the C port, pkg and world modules, then hands control over to
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
         s7_load(sc, argv[1]);
     } else {
         /* interactive REPL */
-        printf("crx-utils s7 Scheme\n");
+        printf("crux-utils s7 Scheme\n");
         char line[4096];
         for (;;) {
             printf("\ns7> ");
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
     }
 
     s7_free(sc);
-    ports_free();
+    ports_clear();
     pkgs_free();
     world_free();
     return 0;

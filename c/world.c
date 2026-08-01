@@ -10,6 +10,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "world.h"
+#include "util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,48 +20,18 @@ static char **world = NULL;
 static int nworld = 0;
 static int cap = 0;
 
-static void *xrealloc(void *p, size_t n)
-{
-    void *q = realloc(p, n);
-    if (!q) { perror("realloc"); exit(1); }
-    return q;
-}
-
-static char *xstrdup(const char *s)
-{
-    char *p = strdup(s);
-    if (!p) { perror("strdup"); exit(1); }
-    return p;
-}
-
-/* trim leading/trailing whitespace in place; returns pointer to start */
-static char *trim(char *s)
-{
-    while (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n')
-        s++;
-    size_t n = strlen(s);
-    while (n > 0 && (s[n-1] == ' ' || s[n-1] == '\t' || s[n-1] == '\r' || s[n-1] == '\n'))
-        s[--n] = '\0';
-    return s;
-}
-
 static void add_name(const char *name)
 {
     if (nworld == cap) {
         cap = cap ? cap * 2 : 64;
-        world = xrealloc(world, sizeof(char *) * cap);
+        world = realloc(world, sizeof(char *) * cap);
     }
-    world[nworld++] = xstrdup(name);
+    world[nworld++] = strdup(name);
 }
 
 int world_read(const char *path)
 {
-    for (int i = 0; i < nworld; i++)
-        free(world[i]);
-    free(world);
-    world = NULL;
-    nworld = 0;
-    cap = 0;
+    world_free();
 
     FILE *f = fopen(path, "r");
     if (!f) return -1;
