@@ -1,13 +1,14 @@
-/* main.c - embed s7 Scheme and expose the ports/pkgs/world databases to it.
+/* main.c - embed s7 Scheme and expose the ports/pkgs databases to it.
  *
  * Compile with:
- *   cc -std=c11 -O2 -I c -o repl c/main.c c/ports.c c/pkgs.c c/world.c c/s7.c
+ *   cc -std=c11 -O2 -I c -o repl c/main.c c/ports.c c/pkgs.c c/s7.c
  *
- * Registers Scheme procedures (load-ports, load-pkgs, world-read, ...) that
- * delegate to the C port, pkg and world modules, then hands control over to
- * s7: it loads a script if one is given on the command line, otherwise drops
- * into an interactive REPL.  Port collection dirs and the pkg db path are
- * passed in from Scheme, so the C side never hardcodes them.
+ * Registers Scheme procedures (load-ports, load-pkgs, has-port?, ...) that
+ * delegate to the C port and pkg modules, then hands control over to s7: it
+ * loads a script if one is given on the command line, otherwise drops into
+ * an interactive REPL.  Port collection dirs and the pkg db path are passed
+ * in from Scheme, so the C side never hardcodes them.  World handling is
+ * done entirely in Scheme (see the World section of scm/cli.scm).
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -19,7 +20,6 @@
 
 #include "ports.h"
 #include "pkgs.h"
-#include "world.h"
 #include "s7.h"
 
 static s7_pointer load_ports(s7_scheme *sc, s7_pointer args)
@@ -118,38 +118,6 @@ static s7_pointer all_installed(s7_scheme *sc, s7_pointer args)
     return list;
 }
 
-/* ---- world file ------------------------------------------------------ */
-
-static s7_pointer scm_world_read(s7_scheme *sc, s7_pointer args)
-{
-    if (world_read(s7_string(s7_car(args))) < 0)
-        return s7_f(sc);
-    s7_pointer list = s7_nil(sc);
-    for (int i = world_count() - 1; i >= 0; i--)
-        list = s7_cons(sc, s7_make_string(sc, world_get(i)), list);
-    return list;
-}
-
-static s7_pointer scm_world_write(s7_scheme *sc, s7_pointer args)
-{
-    return s7_make_boolean(sc, world_write(s7_string(s7_car(args))) == 0);
-}
-
-static s7_pointer scm_world_add(s7_scheme *sc, s7_pointer args)
-{
-    return s7_make_boolean(sc, world_add(s7_string(s7_car(args))));
-}
-
-static s7_pointer scm_world_remove(s7_scheme *sc, s7_pointer args)
-{
-    return s7_make_boolean(sc, world_remove(s7_string(s7_car(args))));
-}
-
-static s7_pointer scm_world_has(s7_scheme *sc, s7_pointer args)
-{
-    return s7_make_boolean(sc, world_has(s7_string(s7_car(args))));
-}
-
 /* s7 has no built-in process exit, so provide one */
 static s7_pointer scm_exit(s7_scheme *sc, s7_pointer args)
 {
@@ -177,11 +145,6 @@ static void register_procedures(s7_scheme *sc)
     s7_define_function(sc, "installed-release",  installed_release, 1, 0, false, "(installed-release name) - release or #f");
     s7_define_function(sc, "all-ports",          all_ports,         0, 0, false, "(all-ports) - list all port names");
     s7_define_function(sc, "all-installed",      all_installed,     0, 0, false, "(all-installed) - list all installed packages");
-    s7_define_function(sc, "world-read",         scm_world_read,    1, 0, false, "(world-read path) - read a world file into a list of package names, or #f");
-    s7_define_function(sc, "world-write",        scm_world_write,   1, 0, false, "(world-write path) - write the current world list back to a file");
-    s7_define_function(sc, "world-add",          scm_world_add,     1, 0, false, "(world-add name) - add a package to the world list");
-    s7_define_function(sc, "world-remove",       scm_world_remove,  1, 0, false, "(world-remove name) - remove a package from the world list");
-    s7_define_function(sc, "world-has?",         scm_world_has,     1, 0, false, "(world-has? name) - #t if a package is in the world list");
 }
 
 int main(int argc, char *argv[])
@@ -221,6 +184,5 @@ int main(int argc, char *argv[])
     s7_free(sc);
     ports_clear();
     pkgs_free();
-    world_free();
     return 0;
 }

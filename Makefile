@@ -16,10 +16,10 @@ all: build
 
 build: repl
 
-repl: c/main.o c/ports.o c/pkgs.o c/world.o c/s7.o
+repl: c/main.o c/ports.o c/pkgs.o c/s7.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
-c/main.o: c/main.c c/ports.h c/pkgs.h c/world.h c/s7.h
+c/main.o: c/main.c c/ports.h c/pkgs.h c/s7.h
 	$(CC) $(CFLAGS) -I c -c -o $@ c/main.c
 
 c/ports.o: c/ports.c c/ports.h c/util.h
@@ -27,9 +27,6 @@ c/ports.o: c/ports.c c/ports.h c/util.h
 
 c/pkgs.o: c/pkgs.c c/pkgs.h c/util.h
 	$(CC) $(CFLAGS) -I c -c -o $@ c/pkgs.c
-
-c/world.o: c/world.c c/world.h c/util.h
-	$(CC) $(CFLAGS) -I c -c -o $@ c/world.c
 
 c/s7.o: c/s7.c c/s7.h
 	$(CC) $(S7_CFLAGS) -I c -c -o $@ c/s7.c
