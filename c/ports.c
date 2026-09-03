@@ -46,10 +46,16 @@ static void port_free(port_t *p)
     free(p->name);
     free(p->version);
     free(p->release);
+    free(p->description);
+    free(p->url);
+    free(p->maintainer);
     free(p->pkgfile);
     for (int i = 0; i < p->ndeps; i++)
         free(p->deps[i]);
     free(p->deps);
+    for (int i = 0; i < p->noptional; i++)
+        free(p->optional[i]);
+    free(p->optional);
     memset(p, 0, sizeof(*p));
 }
 
@@ -97,8 +103,19 @@ static int load_pkgfile(const char *path, port_t *p)
         } else if (strncmp(s, "release=", 8) == 0) {
             free(p->release);
             p->release = strdup(trim(s + 8));
+        } else if (strncmp(s, "# Description: ", 15) == 0) {
+            free(p->description);
+            p->description = strdup(trim(s + 15));
+        } else if (strncmp(s, "# URL: ", 7) == 0) {
+            free(p->url);
+            p->url = strdup(trim(s + 7));
+        } else if (strncmp(s, "# Maintainer: ", 14) == 0) {
+            free(p->maintainer);
+            p->maintainer = strdup(trim(s + 14));
         } else if (strncmp(s, "# Depends on: ", 14) == 0) {
             p->deps = split_ws(s + 14, &p->ndeps);
+        } else if (strncmp(s, "# Optional: ", 12) == 0) {
+            p->optional = split_ws(s + 12, &p->noptional);
         }
     }
 

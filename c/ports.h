@@ -8,6 +8,11 @@ typedef struct {
     char *release;   /* e.g. "1" */
     char **deps;     /* names from the "# Depends on:" comment */
     int ndeps;
+    char **optional; /* names from the "# Optional:" comment */
+    int noptional;
+    char *description; /* from the "# Description:" header */
+    char *url;         /* from the "# URL:" header */
+    char *maintainer;  /* from the "# Maintainer:" header */
     char *pkgfile;   /* full path to the Pkgfile on disk */
 } port_t;
 

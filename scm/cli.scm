@@ -26,8 +26,7 @@
 ;; ===========================================================================
 
 ;; Port collections to scan (one level deep, no recursion) and the pkg db.
-(define *ports-dirs* '(;; "/usr/ports/local"
-                       "/usr/ports/contrib" "/usr/ports/core" "/usr/ports/opt" "/usr/ports/xorg"))
+(define *ports-dirs* '("/usr/ports/local" "/usr/ports/contrib" "/usr/ports/core" "/usr/ports/opt" "/usr/ports/xorg"))
 (define *pkg-db* "/var/lib/pkg/db")
 
 ;; The auto-maintained file that `install` / `world add` / `world remove`

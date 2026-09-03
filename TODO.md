@@ -15,14 +15,18 @@
       remove` just call `world-add` / `world-del`; `world <file>` was dropped.
 - [x] `scm/cli.scm` reorganized into consistent sections: Configuration,
       World, Helpers, Commands.
+- [x] Parse the full Pkgfile header in C (`c/ports.c`) and expose it to
+      Scheme: `port-description`, `port-url`, `port-maintainer`,
+      `port-optional` (plus the existing `port-deps`). `source` / `build`
+      are intentionally not parsed. Missing ports/fields surface as `#f`;
+      `port-deps` / `port-optional` are `()` when a port has none. Enables a
+      `search` over descriptions.
 
 Backlog from the `cli.scm` design review (2026-08-01). None started.
 
 ## High
 
 - [ ] `search <pattern>` command - find ports by name (uses `all-ports`)
-- [ ] Parse the full Pkgfile header in C (`c/ports.c`) and expose it to Scheme
-      (description, URL, maintainer, source, ...). Prerequisite for a useful
 - [ ] Implement /etc/ports/drivers and add cli for it, maybe call it sync. at the same
       time consider how diff should work, these commands go hand in hand.
 - [ ] Implement post and pre -install scripts

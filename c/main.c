@@ -9,6 +9,9 @@
  * an interactive REPL.  Port collection dirs and the pkg db path are passed
  * in from Scheme, so the C side never hardcodes them.  World handling is
  * done entirely in Scheme (see the World section of scm/cli.scm).
+ *
+ * Null handling: a missing port or field surfaces as #f from Scheme;
+ * port-deps / port-optional are () when the port has none.
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -47,20 +50,43 @@ static s7_pointer has_port(s7_scheme *sc, s7_pointer args)
 static s7_pointer port_version(s7_scheme *sc, s7_pointer args)
 {
     const port_t *p = ports_find(s7_string(s7_car(args)));
-    return s7_make_string(sc, p && p->version ? p->version : "");
+    if (!p || !p->version) return s7_f(sc);
+    return s7_make_string(sc, p->version);
 }
 
 static s7_pointer port_release(s7_scheme *sc, s7_pointer args)
 {
     const port_t *p = ports_find(s7_string(s7_car(args)));
-    return s7_make_string(sc, p && p->release ? p->release : "");
+    if (!p || !p->release) return s7_f(sc);
+    return s7_make_string(sc, p->release);
+}
+
+static s7_pointer port_description(s7_scheme *sc, s7_pointer args)
+{
+    const port_t *p = ports_find(s7_string(s7_car(args)));
+    if (!p || !p->description) return s7_f(sc);
+    return s7_make_string(sc, p->description);
+}
+
+static s7_pointer port_url(s7_scheme *sc, s7_pointer args)
+{
+    const port_t *p = ports_find(s7_string(s7_car(args)));
+    if (!p || !p->url) return s7_f(sc);
+    return s7_make_string(sc, p->url);
+}
+
+static s7_pointer port_maintainer(s7_scheme *sc, s7_pointer args)
+{
+    const port_t *p = ports_find(s7_string(s7_car(args)));
+    if (!p || !p->maintainer) return s7_f(sc);
+    return s7_make_string(sc, p->maintainer);
 }
 
 /* parent directory of the port's Pkgfile */
 static s7_pointer port_dir(s7_scheme *sc, s7_pointer args)
 {
     const port_t *p = ports_find(s7_string(s7_car(args)));
-    if (!p) return s7_make_string(sc, "");
+    if (!p) return s7_f(sc);
 
     char *copy = strdup(p->pkgfile);
     char *slash = strrchr(copy, '/');
@@ -73,11 +99,20 @@ static s7_pointer port_dir(s7_scheme *sc, s7_pointer args)
 static s7_pointer port_deps(s7_scheme *sc, s7_pointer args)
 {
     const port_t *p = ports_find(s7_string(s7_car(args)));
+    if (!p) return s7_f(sc);
     s7_pointer list = s7_nil(sc);
-    if (p) {
-        for (int i = p->ndeps - 1; i >= 0; i--)
-            list = s7_cons(sc, s7_make_string(sc, p->deps[i]), list);
-    }
+    for (int i = p->ndeps - 1; i >= 0; i--)
+        list = s7_cons(sc, s7_make_string(sc, p->deps[i]), list);
+    return list;
+}
+
+static s7_pointer port_optional(s7_scheme *sc, s7_pointer args)
+{
+    const port_t *p = ports_find(s7_string(s7_car(args)));
+    if (!p) return s7_f(sc);
+    s7_pointer list = s7_nil(sc);
+    for (int i = p->noptional - 1; i >= 0; i--)
+        list = s7_cons(sc, s7_make_string(sc, p->optional[i]), list);
     return list;
 }
 
@@ -136,10 +171,14 @@ static void register_procedures(s7_scheme *sc)
     s7_define_function(sc, "ports-clear",        ports_clear_fn,    0, 0, false, "(ports-clear) - clear the loaded ports");
     s7_define_function(sc, "load-pkgs",          load_pkgs,         1, 0, false, "(load-pkgs path) - parse the package db at path");
     s7_define_function(sc, "has-port?",          has_port,          1, 0, false, "(has-port? name) - #t if port exists in ports tree");
-    s7_define_function(sc, "port-version",       port_version,      1, 0, false, "(port-version name) - version string");
-    s7_define_function(sc, "port-release",       port_release,      1, 0, false, "(port-release name) - release string");
-    s7_define_function(sc, "port-dir",           port_dir,          1, 0, false, "(port-dir name) - parent dir of Pkgfile");
-    s7_define_function(sc, "port-deps",          port_deps,         1, 0, false, "(port-deps name) - list of dependencies");
+    s7_define_function(sc, "port-version",       port_version,      1, 0, false, "(port-version name) - version string, or #f");
+    s7_define_function(sc, "port-release",       port_release,      1, 0, false, "(port-release name) - release string, or #f");
+    s7_define_function(sc, "port-description",   port_description,  1, 0, false, "(port-description name) - description string, or #f");
+    s7_define_function(sc, "port-url",           port_url,          1, 0, false, "(port-url name) - URL string, or #f");
+    s7_define_function(sc, "port-maintainer",    port_maintainer,   1, 0, false, "(port-maintainer name) - maintainer string, or #f");
+    s7_define_function(sc, "port-dir",           port_dir,          1, 0, false, "(port-dir name) - parent dir of Pkgfile, or #f");
+    s7_define_function(sc, "port-deps",          port_deps,         1, 0, false, "(port-deps name) - list of dependencies, or #f if no port");
+    s7_define_function(sc, "port-optional",      port_optional,     1, 0, false, "(port-optional name) - list of optional dependencies, or #f if no port");
     s7_define_function(sc, "installed?",         is_installed,      1, 0, false, "(installed? name) - #t if package is installed");
     s7_define_function(sc, "installed-version",  installed_version, 1, 0, false, "(installed-version name) - version or #f");
     s7_define_function(sc, "installed-release",  installed_release, 1, 0, false, "(installed-release name) - release or #f");

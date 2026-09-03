@@ -7,7 +7,8 @@ embedded s7 Scheme interpreter that provides the command-line interface.
 
 - `c/ports.c` / `c/ports.h` - scans the given port collection directories
   (e.g. `/usr/ports/core`) one level deep, no recursion, for Pkgfiles and
-  builds a list of available ports (name, version, release, dependencies).
+  builds a list of available ports (name, version, release, dependencies,
+  optional dependencies, description, URL, maintainer).
 - `c/pkgs.c` / `c/pkgs.h` - parses the package database and builds a list
   of installed packages.
 - `c/main.c` - the main program. Exposes the port and package databases to
